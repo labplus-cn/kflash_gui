@@ -31,6 +31,9 @@ SipeedMaixduino   = "Sipeed Maixduino"
 KendryteKd233     = "Kendryte KD233"
 kendryteTrainer   = "kendryte Trainer"
 M5StickV          = "M5StickV"
+labplus1956       = "labplu 1956"
+labplus_classroom_kit = "labplus classroom_kit"
+
 Auto   = "Auto"
 
 # get data path

@@ -23,6 +23,7 @@ import binascii,re
 if sys.platform == "win32":
     import ctypes
 from  kflash_py.kflash import KFlash
+from cp210x.cp210x import cp2104
 
 class MyClass(object):
     def __init__(self, arg):
@@ -237,6 +238,9 @@ class MainWindow(QMainWindow):
         self.boardCombobox.addItem(parameters.KendryteKd233)
         self.boardCombobox.addItem(parameters.kendryteTrainer)
         self.boardCombobox.addItem(parameters.Auto)
+        self.boardCombobox.addItem(parameters.labplus1956)
+        self.boardCombobox.addItem(parameters.labplus_classroom_kit)
+
         self.burnPositionLabel = QLabel(tr("BurnTo"))
         self.burnPositionCombobox = ComboBox()
         self.burnPositionCombobox.addItem(tr("Flash"))
@@ -1006,6 +1010,11 @@ class MainWindow(QMainWindow):
         self.statusBarStauts.setText("<font color=%s>%s ...</font>" %("#1aac2d", tr("Downloading")))
         hint = "<font color=%s>%s</font>" %("#ff0d0d", tr("DownloadStart"))
         self.progressHint.setText(hint)
+
+        # change cp2104 GPIO2 to select k210
+        p = cp2104(dev)
+        p.write_gpio(2, 0)
+        del p
         # download
         self.burnThread = threading.Thread(target=self.flashBurnProcess, args=(dev, baud, board, sram, fileType, filesInfo, self.progress, color, slow))
         self.burnThread.setDaemon(True)
