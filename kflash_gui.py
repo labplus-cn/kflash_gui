@@ -1012,9 +1012,10 @@ class MainWindow(QMainWindow):
         self.progressHint.setText(hint)
 
         # change cp2104 GPIO2 to select k210
-        p = cp2104(dev)
-        p.write_gpio(2, 0)
-        del p
+        if boardText == parameters.labplus1956 or boardText == parameters.labplus_classroom_kit:
+            p = cp2104(dev)
+            p.write_gpio(2, 0)
+            del p
         # download
         self.burnThread = threading.Thread(target=self.flashBurnProcess, args=(dev, baud, board, sram, fileType, filesInfo, self.progress, color, slow))
         self.burnThread.setDaemon(True)
