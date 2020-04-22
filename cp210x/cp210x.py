@@ -18,11 +18,48 @@ OSError
 import os
 import usb.core
 import usb.util
+import serial
 import serial.tools.list_ports
 
+if os.name == 'nt':
+    import ctypes
+
+    _DLL = ctypes.WinDLL(os.path.join(os.path.dirname(__file__), "CP210xRuntime.dll"))
+
+    def cp210x_errcheck(result, func, args):
+        if result != 0:
+            raise serial.SerialException("CP210x runtime error: %d" % result)
+
+    for cp210x_function in [
+        "CP210xRT_ReadLatch", 
+        "CP210xRT_WriteLatch",
+        "CP210xRT_GetPartNumber", 
+        "CP210xRT_GetDeviceProductString",
+        "CP210xRT_GetDeviceSerialNumber",
+        "CP210xRT_GetDeviceInterfaceString"]:
+        fnc = getattr(_DLL, cp210x_function)
+        fnc.restype = ctypes.c_int
+        fnc.errcheck = cp210x_errcheck
+
+    def WriteDeviceGPIO(serial, io_num, new_state):
+        if io_num in range(0, 4):
+            latch_mask = 0x00000001 << io_num
+            latch = 0x00000000
+            if (new_state == 1):
+                latch = 0x00000001 << io_num
+            return _DLL.CP210xRT_WriteLatch(serial._port_handle, latch_mask, latch)
+    
+    def ReadDeviceGPIO(serial, io_num):
+        value = ctypes.c_int()
+        _DLL.CP210xRT_ReadLatch(serial._port_handle, ctypes.byref(value))
+        return value
+               
 class cp2104:
 
     def _find_cp210x_by(self, name):
+        # windows系统,打开串口对象
+        if os.name == 'nt':
+            return serial.Serial(name)
         # 根据串口名称查找序列号
         ports = serial.tools.list_ports.grep(name)
         serial_number = None
@@ -52,7 +89,9 @@ class cp2104:
             raise OSError("not found cp2104")
 
     def write_gpio(self, io_num, new_state):
-        if self.dev != None:
+        if os.name == 'nt':
+            WriteDeviceGPIO(self.dev, io_num, new_state)
+        else:
             reqType = 0x41  
             bReq = 0xff     # VENDOR_SPECIFIC
             wVal = 0x37E1   # WRITE_LATCH(cp2103/4)
@@ -69,7 +108,9 @@ class cp2104:
             self.dev.ctrl_transfer(reqType, bReq, wVal, wIndex)
 
     def read_gpio(self,io_num):
-        if self.dev != None:
+        if os.name == 'nt':
+            return ReadDeviceGPIO(self.dev, io_num)
+        else:
             reqType = 0x41  
             bReq = 0xff     # VENDOR_SPECIFIC
             wVal = 0x00C2   # READ_LATCH(cp2103/4)
@@ -81,8 +122,9 @@ class cp2104:
             if resul & (0x0001 << io_num):
                 return 1
             else:
-                return 0         
-                
-# cp = cp2104('/dev/ttyUSB0')
-# cp.write_gpio(0, 0)
-# cp.close()
+                return 0 
+                     
+# cp = cp2104('COM50')
+# cp.write_gpio(2, 0)
+# print(cp.read_gpio(2))
+# del cp
